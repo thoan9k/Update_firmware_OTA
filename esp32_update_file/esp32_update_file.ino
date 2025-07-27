@@ -76,7 +76,7 @@ void checkForUpdate() {
   Serial.println("Đang kiểm tra cập nhật...");
   
   String commitHash = getLatestCommitHash();
-  if (commitHash.length() == 0) {
+  if (commitHash.length() <=0) {
     Serial.println("Không lấy được commit hash!");
     return;
   }
