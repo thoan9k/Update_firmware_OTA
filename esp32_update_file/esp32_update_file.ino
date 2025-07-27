@@ -19,41 +19,9 @@ const char* baseURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware
 const char* firmwarefile = "/hello.txt";
 const char* versionfile = "/version.json";
 // Phiên bản hiện tại của ESP32
-const char* current_version = "1.0.2";
+const char* current_version = "1.0.0";
 
-void checkForUpdate() {
-   
-  String commitHash = getLatestCommitHash();
-  if (commitHash.length() > 0)
-  {
-    String latestURL = String(baseURL) + commitHash + versionfile;
-    HTTPClient http;
-    http.begin(latestURL);  // link JSON
-    int httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();
-      StaticJsonDocument<512> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (!error) {
-        const char* new_version = doc["version"];
-        // const char* firmware_url = doc["firmware"];
 
-        Serial.println("Version trên server: " + String(new_version));
-        if (String(new_version) != current_version) {
-          Serial.println("Phát hiện phiên bản mới! Đang tải firmware...");
-          downloadLatestFile(firmwarefile);
-          // performFirmwareUpdate(firmware_url);
-        } else {
-          Serial.println("Đã là phiên bản mới nhất.");
-        }
-      }
-    } else {
-      Serial.println("Lỗi tải version.json, mã lỗi: " + String(httpCode));
-    }
-    http.end();
-  }
- 
-}
 String getLatestCommitHash() {
   HTTPClient http;
   http.begin(repoAPI);
@@ -77,6 +45,7 @@ String getLatestCommitHash() {
   http.end();
   return commitHash;
 }
+
 void downloadLatestFile(const char* fileName) {
   String commitHash = getLatestCommitHash();
   
@@ -103,6 +72,64 @@ void downloadLatestFile(const char* fileName) {
     downloadFile(); // Fallback
   }
 }
+void checkForUpdate() {
+  Serial.println("Đang kiểm tra cập nhật...");
+  
+  String commitHash = getLatestCommitHash();
+  if (commitHash.length() == 0) {
+    Serial.println("Không lấy được commit hash!");
+    return;
+  }
+  
+  String latestURL = String(baseURL) + commitHash + versionfile;
+  Serial.println("Checking: " + latestURL);
+  
+  HTTPClient http;
+  http.begin(latestURL);
+  http.addHeader("User-Agent", "ESP32-OTA-Client");
+  http.addHeader("Cache-Control", "no-cache");
+  
+  int httpCode = http.GET();
+  
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    Serial.println("Response: " + payload);
+    
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+    
+    if (!error) {
+      const char* new_version = doc["version"];
+      
+      if (new_version != nullptr) {
+        Serial.println("Version hiện tại: " + String(current_version));
+        Serial.println("Version trên server: " + String(new_version));
+        
+        if (String(new_version) != current_version) {
+          Serial.println("🎉 Phát hiện phiên bản mới! Đang tải firmware...");
+          
+          // Uncomment khi sẵn sàng update
+          // downloadLatestFile(firmwarefile);
+          // performFirmwareUpdate();
+          
+          // Test mode - chỉ hiển thị thông báo
+          Serial.println("⚠️  Test mode - không thực hiện update");
+          
+        } else {
+          Serial.println("✅ Đã là phiên bản mới nhất.");
+        }
+      } else {
+        Serial.println("❌ Không tìm thấy trường 'version' trong JSON");
+      }
+    } else {
+      Serial.println("❌ Lỗi parse JSON: " + String(error.c_str()));
+    }
+  } else {
+    Serial.println("❌ Lỗi tải version.json, mã: " + String(httpCode));
+  }
+  
+  http.end();
+}
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -124,12 +151,13 @@ void setup() {
   
   // Tải file
   // downloadFile();
-  // downloadLatestFile();
+  // downloadLatestFile(firmwarefile);
 }
 
 void loop() {
   // Không làm gì trong loop
   checkForUpdate();
+  // Serial.println("ok");
   delay(500);
 }
 
