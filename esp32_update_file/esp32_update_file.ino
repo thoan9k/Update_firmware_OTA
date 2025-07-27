@@ -19,12 +19,13 @@ const char* baseURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware
 const char* firmwarefile = "/hello.txt";
 const char* versionfile = "/version.json";
 // Phiên bản hiện tại của ESP32
-const char* current_version = "1.0.0";
+char* current_version = "1.0.0";
 
 
 String getLatestCommitHash() {
   HTTPClient http;
   http.begin(repoAPI);
+  
   http.addHeader("User-Agent", "ESP32-HTTPClient");
   
   int httpCode = http.GET();
@@ -78,7 +79,7 @@ void checkForUpdate() {
   String commitHash = getLatestCommitHash();
   if (commitHash.length() <=0) {
     Serial.println("Không lấy được commit hash!");
-     Serial.println("Không lấy được commit hash!");
+    //  Serial.println("Không lấy được commit hash!");
     return;
   }
   
@@ -110,11 +111,14 @@ void checkForUpdate() {
           Serial.println("🎉 Phát hiện phiên bản mới! Đang tải firmware...");
           
           // Uncomment khi sẵn sàng update
-          // downloadLatestFile(firmwarefile);
+          downloadLatestFile(firmwarefile);
+          current_version = (char*) malloc(strlen(new_version) + 1);
+          strcpy(current_version, new_version);
+          Serial.println("Version đã cập nhập: " + String(current_version));
           // performFirmwareUpdate();
           
           // Test mode - chỉ hiển thị thông báo
-          Serial.println("⚠️  Test mode - không thực hiện update");
+          // Serial.println("⚠️  Test mode - không thực hiện update");
           
         } else {
           Serial.println("✅ Đã là phiên bản mới nhất.");
@@ -159,7 +163,7 @@ void loop() {
   // Không làm gì trong loop
   checkForUpdate();
   // Serial.println("ok");
-  delay(500);
+  delay(30000);
 }
 
 void downloadFile() {
