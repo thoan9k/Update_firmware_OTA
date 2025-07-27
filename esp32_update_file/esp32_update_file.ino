@@ -129,7 +129,8 @@ void setup() {
 
 void loop() {
   // Không làm gì trong loop
-  delay(10000);
+  checkForUpdate();
+  delay(500);
 }
 
 void downloadFile() {
