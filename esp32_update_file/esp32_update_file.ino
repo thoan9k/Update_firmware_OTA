@@ -9,6 +9,60 @@ const char* password = "66778899";
 const char* fileURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware_OTA/main/hello.txt";
 //https://drive.google.com/file/d/1__VMmdXdNzLhVKFZ8mkK2Ql_RdlmFkZ7/view?usp=sharing
 //https://drive.google.com/file/d/1XCSFpM0-HctHF3a1fdo9JJAzk0HE7GpR/view?usp=sharing
+
+// Base URL cho GitHub API
+const char* repoAPI = "https://api.github.com/repos/thoan9k/Update_firmware_OTA/commits/main";
+const char* baseURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware_OTA/";
+const char* fileName = "/hello.txt";
+String getLatestCommitHash() {
+  HTTPClient http;
+  http.begin(repoAPI);
+  http.addHeader("User-Agent", "ESP32-HTTPClient");
+  
+  int httpCode = http.GET();
+  String commitHash = "";
+  
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    
+    // Tìm commit hash trong JSON response
+    int shaIndex = payload.indexOf("\"sha\":\"");
+    if (shaIndex != -1) {
+      commitHash = payload.substring(shaIndex + 7, shaIndex + 47); // SHA có 40 ký tự
+      Serial.print("Latest commit: ");
+      Serial.println(commitHash);
+    }
+  }
+  
+  http.end();
+  return commitHash;
+}
+void downloadLatestFile() {
+  String commitHash = getLatestCommitHash();
+  
+  if (commitHash.length() > 0) {
+    String latestURL = String(baseURL) + commitHash + fileName;
+    Serial.print("URL với commit hash: ");
+    Serial.println(latestURL);
+    
+    // Tải file với URL mới
+    HTTPClient http;
+    http.begin(latestURL.c_str());
+    
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String content = http.getString();
+      Serial.println("=== NỘI DUNG FILE MỚI NHẤT ===");
+      Serial.println(content);
+      Serial.println("==============================");
+    }
+    
+    http.end();
+  } else {
+    Serial.println("Không lấy được commit hash, dùng URL cũ...");
+    downloadFile(); // Fallback
+  }
+}
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -29,7 +83,8 @@ void setup() {
   Serial.println(WiFi.localIP());
   
   // Tải file
-  downloadFile();
+  // downloadFile();
+  downloadLatestFile();
 }
 
 void loop() {
