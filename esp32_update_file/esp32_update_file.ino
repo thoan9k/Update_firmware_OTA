@@ -1,3 +1,6 @@
+#include <ArduinoJson.h>
+#include <ArduinoJson.hpp>
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 
@@ -5,7 +8,7 @@
 const char* ssid = "Hoang Van Thoan";
 const char* password = "66778899";
 
-// URL file cần tải từ Google Drive
+// URL file cần tải từ Google Drive hoặc github
 const char* fileURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware_OTA/main/hello.txt";
 //https://drive.google.com/file/d/1__VMmdXdNzLhVKFZ8mkK2Ql_RdlmFkZ7/view?usp=sharing
 //https://drive.google.com/file/d/1XCSFpM0-HctHF3a1fdo9JJAzk0HE7GpR/view?usp=sharing
@@ -13,7 +16,44 @@ const char* fileURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware
 // Base URL cho GitHub API
 const char* repoAPI = "https://api.github.com/repos/thoan9k/Update_firmware_OTA/commits/main";
 const char* baseURL = "https://raw.githubusercontent.com/thoan9k/Update_firmware_OTA/";
-const char* fileName = "/hello.txt";
+const char* firmwarefile = "/hello.txt";
+const char* versionfile = "/version.json";
+// Phiên bản hiện tại của ESP32
+const char* current_version = "1.0.2";
+
+void checkForUpdate() {
+   
+  String commitHash = getLatestCommitHash();
+  if (commitHash.length() > 0)
+  {
+    String latestURL = String(baseURL) + commitHash + versionfile;
+    HTTPClient http;
+    http.begin(latestURL);  // link JSON
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      StaticJsonDocument<512> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (!error) {
+        const char* new_version = doc["version"];
+        // const char* firmware_url = doc["firmware"];
+
+        Serial.println("Version trên server: " + String(new_version));
+        if (String(new_version) != current_version) {
+          Serial.println("Phát hiện phiên bản mới! Đang tải firmware...");
+          downloadLatestFile(firmwarefile);
+          // performFirmwareUpdate(firmware_url);
+        } else {
+          Serial.println("Đã là phiên bản mới nhất.");
+        }
+      }
+    } else {
+      Serial.println("Lỗi tải version.json, mã lỗi: " + String(httpCode));
+    }
+    http.end();
+  }
+ 
+}
 String getLatestCommitHash() {
   HTTPClient http;
   http.begin(repoAPI);
@@ -37,7 +77,7 @@ String getLatestCommitHash() {
   http.end();
   return commitHash;
 }
-void downloadLatestFile() {
+void downloadLatestFile(const char* fileName) {
   String commitHash = getLatestCommitHash();
   
   if (commitHash.length() > 0) {
@@ -84,7 +124,7 @@ void setup() {
   
   // Tải file
   // downloadFile();
-  downloadLatestFile();
+  // downloadLatestFile();
 }
 
 void loop() {
